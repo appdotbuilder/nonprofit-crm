@@ -1,21 +1,33 @@
+import { db } from '../db';
+import { eventsTable } from '../db/schema';
 import { type CreateEventInput, type UpdateEventInput, type Event, type FilterInput, type CreateEventAttendeeInput, type EventAttendee } from '../schema';
 
 export async function createEvent(input: CreateEventInput): Promise<Event> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new event and persisting it in the database.
-  // Must enforce tenant isolation by using the tenantId from input.
-  return Promise.resolve({
-    id: 0, // Placeholder ID
-    tenantId: input.tenantId,
-    name: input.name,
-    description: input.description,
-    date: input.date,
-    location: input.location,
-    capacity: input.capacity,
-    customFields: input.customFields,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  } as Event);
+  try {
+    // Insert event record
+    const result = await db.insert(eventsTable)
+      .values({
+        tenantId: input.tenantId,
+        name: input.name,
+        description: input.description,
+        date: input.date,
+        location: input.location,
+        capacity: input.capacity,
+        customFields: input.customFields,
+      })
+      .returning()
+      .execute();
+
+    // Convert database result to proper Event type
+    const event = result[0];
+    return {
+      ...event,
+      customFields: event.customFields as Record<string, any> | null,
+    };
+  } catch (error) {
+    console.error('Event creation failed:', error);
+    throw error;
+  }
 }
 
 export async function getEvents(filter: FilterInput): Promise<{ events: Event[]; total: number }> {

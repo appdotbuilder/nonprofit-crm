@@ -1,21 +1,33 @@
+import { db } from '../db';
+import { donorsTable } from '../db/schema';
 import { type CreateDonorInput, type UpdateDonorInput, type Donor, type FilterInput } from '../schema';
 
 export async function createDonor(input: CreateDonorInput): Promise<Donor> {
-  // This is a placeholder declaration! Real code should be implemented here.
-  // The goal of this handler is creating a new donor and persisting it in the database.
-  // Must enforce tenant isolation by using the tenantId from input.
-  return Promise.resolve({
-    id: 0, // Placeholder ID
-    tenantId: input.tenantId,
-    name: input.name,
-    email: input.email,
-    phone: input.phone,
-    address: input.address,
-    notes: input.notes,
-    customFields: input.customFields,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  } as Donor);
+  try {
+    // Insert donor record
+    const result = await db.insert(donorsTable)
+      .values({
+        tenantId: input.tenantId,
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        address: input.address,
+        notes: input.notes,
+        customFields: input.customFields,
+      })
+      .returning()
+      .execute();
+
+    // Convert the database result to match our Donor schema
+    const donor = result[0];
+    return {
+      ...donor,
+      customFields: donor.customFields as Record<string, any> | null,
+    };
+  } catch (error) {
+    console.error('Donor creation failed:', error);
+    throw error;
+  }
 }
 
 export async function getDonors(filter: FilterInput): Promise<{ donors: Donor[]; total: number }> {
